@@ -4,10 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { createTimeline } from "animejs";
-import Image from "next/image";
 import CursorBubble from "@/components/CursorBubble";
-import Opener from "@/components/Opener";
 import SmoothScroll from "@/components/SmoothScroll";
 import SpeedLines from "@/components/SpeedLines";
 import { ArrowUpRight, MenuIcon } from "@/components/Icons";
@@ -47,7 +44,6 @@ export default function SeasonExperience() {
   const root = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ key: number; sub: string; title: string } | null>(null);
-  const [booted, setBooted] = useState(false);
 
   useGSAP(
     () => {
@@ -380,27 +376,8 @@ export default function SeasonExperience() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    const shell = root.current;
-    if (!shell || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const trigger = shell.querySelector<HTMLElement>("[data-profile-trigger]");
-    if (!trigger) return;
-    const onClick = () => {
-      const frame = trigger.querySelector<HTMLElement>("[data-profile-frame]");
-      const scan = trigger.querySelector<HTMLElement>(".profile-portrait-scan");
-      const ghost = trigger.querySelector<HTMLElement>("[data-profile-ghost]");
-      const timeline = createTimeline({ defaults: { ease: "outExpo" } });
-      if (frame) timeline.add(frame, { duration: 700, rotate: [-2, 2, -1.2, 0], scale: [1, 0.965, 1.02, 1] }, 0);
-      if (scan) timeline.add(scan, { duration: 650, ease: "inOutQuad", top: ["-34%", "100%"] }, 0);
-      if (ghost) timeline.add(ghost, { duration: 700, opacity: [0.38, 0.72, 0.38] }, 0);
-    };
-    trigger.addEventListener("click", onClick);
-    return () => trigger.removeEventListener("click", onClick);
-  }, []);
-
   return (
     <div className="season-root" id="top" ref={root}>
-      {!booted ? <Opener onDone={() => setBooted(true)} /> : null}
       <div aria-hidden="true" className="season-progress"><span data-season-progress /></div>
       <header className="season-header">
         <div className="season-header-inner">
@@ -442,15 +419,7 @@ export default function SeasonExperience() {
         <section className="episode" data-section="profile" id="profile">
           <span aria-hidden="true" className="ep-ghost" data-ghostnum>01</span>
           <div className="episode-head" data-reveal><span>EP.01</span><h2 data-wipe-heading>ORIGIN<br /><em>STORY</em></h2></div>
-          <div className="episode-grid">
-            <button aria-label="Replay portrait animation" className="profile-portrait" data-profile-trigger type="button">
-              <div className="profile-portrait-ghost" aria-hidden="true" data-profile-ghost />
-              <div className="profile-portrait-frame" data-profile-frame>
-                <Image alt="Portrait of Yussif Sare" fill priority={false} sizes="(max-width: 820px) 86vw, 340px" src="/profile.jpg" />
-                <span aria-hidden="true" className="profile-portrait-scan" />
-              </div>
-              <div className="profile-portrait-meta"><span>ys / 001</span><span>click to replay</span></div>
-            </button>
+          <div className="episode-grid episode-grid-solo">
             <div className="episode-copy" data-reveal>
               <p className="episode-lede">“{githubProfile.bio}.” — that&apos;s Dave, aka {githubProfile.username}, studying at Accra Technical University with {githubProfile.publicRepos} public repos and counting.</p>
               <p>From C systems and Python hardware hacks to interfaces people actually touch — this season is the frontend cut.</p>
@@ -467,7 +436,7 @@ export default function SeasonExperience() {
           <div className="stat-list">
             {stats.map((stat) => (
               <div className="stat-row" data-reveal key={stat.name}>
-                <div className="stat-top"><span>{stat.name}</span><span>{stat.value}</span></div>
+                <div className="stat-top"><span>{stat.name}</span></div>
                 <div className="stat-track"><i data-stat-fill={stat.value} /></div>
                 <small>{stat.flavor}</small>
               </div>
