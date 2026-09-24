@@ -145,7 +145,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .stat-row small { color: var(--muted); font-family: var(--font-mono); font-size: .56rem; }
 
 .quest-list { border-top: 1px solid var(--line); }
-.quest-row { align-items: center; border-bottom: 1px solid var(--line); display: grid; gap: 22px; grid-template-columns: 64px 1fr 170px 30px; padding: 24px 6px; transition: background 180ms ease, padding 180ms ease; }
+.quest-row { align-items: center; border-bottom: 1px solid var(--line); display: grid; gap: 22px; grid-template-columns: 64px 1fr 170px 30px; overflow: hidden; padding: 24px 6px; position: relative; transition: background 180ms ease, padding 180ms ease; }
 .quest-row:hover { background: rgba(255,49,49,.06); padding-left: 16px; padding-right: 16px; }
 .quest-rank { align-items: center; border: 2px solid var(--paper); display: inline-flex; font-family: var(--font-display); font-size: 1.4rem; height: 52px; justify-content: center; width: 52px; }
 .rank-S { background: var(--red); border-color: var(--red); color: var(--night); }
@@ -194,7 +194,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 @media (max-width: 560px) {
-  .op-title { font-size: clamp(3.4rem, 19vw, 6rem); }
+  .op-title { font-size: clamp(2.6rem, 13.5vw, 6rem); }
+  .op-hero-top { font-size: .52rem; }
+  .op-badge { height: 84px; right: 16px; top: 108px; width: 84px; }
+  .op-tag { font-size: .94rem; }
   .episode { padding-bottom: 90px; padding-top: 90px; }
   .episode-head h2 { font-size: clamp(2.8rem, 14vw, 4.6rem); }
   .quest-row { gap: 12px; grid-template-columns: 46px 1fr 24px; padding: 18px 2px; }

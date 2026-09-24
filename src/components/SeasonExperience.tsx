@@ -240,11 +240,44 @@ export default function SeasonExperience() {
         });
       }
 
+      const speedHeroEl = shell.querySelector<HTMLElement>("[data-speedhero]");
+      let pressTimer: number | undefined;
+      const onPressStart = () => {
+        window.clearTimeout(pressTimer);
+        pressTimer = window.setTimeout(() => {
+          const ring = shell.querySelector<HTMLElement>("[data-impact-ring]");
+          if (ring && !reducedMotion) {
+            gsap.fromTo(ring, { autoAlpha: 0.9, scale: 0.2 }, { autoAlpha: 0, duration: 1, ease: "expo.out", scale: 1 });
+          }
+          if (!reducedMotion) {
+            gsap.fromTo(".op-title", { x: 0 }, { clearProps: "x", duration: 0.06, repeat: 3, x: 6, yoyo: true });
+          }
+          try {
+            navigator.vibrate(40);
+          } catch {
+            /* vibration unavailable */
+          }
+        }, 550);
+      };
+      const onPressEnd = () => window.clearTimeout(pressTimer);
+      if (speedHeroEl) {
+        speedHeroEl.addEventListener("pointerdown", onPressStart);
+        speedHeroEl.addEventListener("pointerup", onPressEnd);
+        speedHeroEl.addEventListener("pointercancel", onPressEnd);
+        speedHeroEl.addEventListener("pointerleave", onPressEnd);
+        cleanups.push(() => {
+          speedHeroEl.removeEventListener("pointerdown", onPressStart);
+          speedHeroEl.removeEventListener("pointerup", onPressEnd);
+          speedHeroEl.removeEventListener("pointercancel", onPressEnd);
+          speedHeroEl.removeEventListener("pointerleave", onPressEnd);
+        });
+      }
+
       const onRippleDown = (event: PointerEvent) => {
         if (reducedMotion) return;
         const target = event.target;
         if (!(target instanceof Element)) return;
-        const control = target.closest<HTMLElement>(".op-button, .game-overlay button");
+        const control = target.closest<HTMLElement>(".op-button, .game-overlay button, [data-quest-row]");
         if (!control) return;
         const bounds = control.getBoundingClientRect();
         const size = Math.max(bounds.width, bounds.height) * 2.1;
