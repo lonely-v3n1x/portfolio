@@ -21,8 +21,8 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yussif Sare — Season 01",
-  description: "Yussif Sare, frontend developer from Accra, Ghana. Season 01: profile, arsenal, quests, and a bonus stage.",
+  title: "Yussif Sare — Frontend Developer",
+  description: "Yussif Sare, frontend developer from Accra, Ghana. Profile, arsenal, quests, and contact.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
