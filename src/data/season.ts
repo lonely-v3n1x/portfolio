@@ -6,6 +6,7 @@ export type Quest = {
   description: string;
   tags: string[];
   repo: string;
+  preview?: string;
 };
 
 export type Stat = {
@@ -23,6 +24,25 @@ export const githubProfile = {
 
 export const quests: Quest[] = [
   {
+    id: "findme",
+    rank: "S",
+    title: "FindMe",
+    genre: "Web App / Maps",
+    description: "GhanaPostGPS Navigator — ask 'What's My Address?' and get found. Dark green and gold, built for getting around Ghana.",
+    tags: ["Web App", "Maps", "GhanaPostGPS"],
+    repo: "https://gh-find-me-nu.vercel.app/",
+    preview: "/findme-preview.jpg",
+  },
+  {
+    id: "gitfetcher",
+    rank: "A",
+    title: "gitfetcher",
+    genre: "API / Python",
+    description: "A simple tool that fetches user info straight from GitHub — fresh off the bench this week.",
+    tags: ["Python", "GitHub API", "CLI"],
+    repo: "https://github.com/lonely-v3n1x/gitfetcher",
+  },
+  {
     id: "contact-bat",
     rank: "A",
     title: "contact-bat",
@@ -36,7 +56,7 @@ export const quests: Quest[] = [
     rank: "S",
     title: "TUI_MusicPlayer",
     genre: "Systems / C",
-    description: "A terminal music player in C. No window manager required — just rhythm and raw control.",
+    description: "A simple terminal UI music player in C — actively hacked on this week. No window manager required.",
     tags: ["C", "TUI", "audio"],
     repo: "https://github.com/lonely-v3n1x/TUI_MusicPlayer",
   },
@@ -48,15 +68,6 @@ export const quests: Quest[] = [
     description: "Drives LED strips over Bluetooth. Software you can literally see.",
     tags: ["Python", "BLE", "hardware"],
     repo: "https://github.com/lonely-v3n1x/ELK_BLE-CONTROL",
-  },
-  {
-    id: "ghpostserver",
-    rank: "B",
-    title: "ghpostserver",
-    genre: "Web / Python",
-    description: "Resolves Ghana Post digital addresses into places you can actually find.",
-    tags: ["Python", "web", "APIs"],
-    repo: "https://github.com/lonely-v3n1x/ghpostserver",
   },
   {
     id: "vehicle-rental",
@@ -79,9 +90,10 @@ export const quests: Quest[] = [
 ];
 
 export const stats: Stat[] = [
-  { name: "FRONTEND", value: 92, flavor: "React / Next.js / TypeScript" },
-  { name: "MOTION", value: 88, flavor: "GSAP / Anime.js / Three.js" },
-  { name: "LINUX", value: 84, flavor: "daily driver / terminal native" },
-  { name: "SYSTEMS", value: 76, flavor: "C / Python / low-level curiosity" },
-  { name: "BACKEND", value: 70, flavor: "Node / Java / Postgres" },
+  { name: "FRONTEND", value: 100, flavor: "React / Next.js / TypeScript" },
+  { name: "MOTION", value: 100, flavor: "GSAP / Anime.js / Three.js" },
+  { name: "LINUX", value: 100, flavor: "daily driver / terminal native" },
+  { name: "SYSTEMS", value: 100, flavor: "C / Python / low-level curiosity" },
+  { name: "BACKEND", value: 100, flavor: "Python / Node / Postgres" },
+  { name: "DEVOPS", value: 100, flavor: "Git / GitHub / CI" },
 ];
