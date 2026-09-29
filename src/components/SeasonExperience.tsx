@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { createTimeline } from "animejs";
+import Image from "next/image";
 import CursorBubble from "@/components/CursorBubble";
+import Opener from "@/components/Opener";
 import SmoothScroll from "@/components/SmoothScroll";
 import SpeedLines from "@/components/SpeedLines";
 import { ArrowUpRight, MenuIcon } from "@/components/Icons";
@@ -44,6 +47,7 @@ export default function SeasonExperience() {
   const root = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ key: number; sub: string; title: string } | null>(null);
+  const [booted, setBooted] = useState(false);
 
   useGSAP(
     () => {
@@ -80,12 +84,20 @@ export default function SeasonExperience() {
         gsap.fromTo("[data-impact-ring]", { autoAlpha: 0.9, scale: 0.2 }, { autoAlpha: 0, duration: 1.1, ease: "expo.out", scale: 1 });
         gsap.from("[data-herometa]", { autoAlpha: 0, duration: 0.6, stagger: 0.1, y: 18 });
 
+        gsap.to(".op-title", {
+          ease: "none",
+          opacity: 0,
+          scrollTrigger: { end: "bottom 30%", scrub: 0.6, start: "top top", trigger: ".op-hero" },
+          yPercent: -12,
+        });
+
         const header = shell.querySelector<HTMLElement>(".season-header");
         if (header) {
           ScrollTrigger.create({
             end: "max",
+            onToggle: (self) => header.classList.toggle("is-scrolled", self.isActive),
             onUpdate: (self) => header.classList.toggle("is-hidden", self.direction === 1 && self.scroll() > 260),
-            start: 0,
+            start: 90,
           });
         }
 
@@ -127,6 +139,54 @@ export default function SeasonExperience() {
 
         gsap.utils.toArray<HTMLElement>("[data-wipe-heading]").forEach((heading) => {
           gsap.fromTo(heading, { autoAlpha: 0, clipPath: "inset(0 0 100% 0)", y: 34 }, { autoAlpha: 1, clipPath: "inset(0 0 0% 0)", duration: 0.9, ease: "power4.out", scrollTrigger: { once: true, start: "top 86%", trigger: heading }, y: 0 });
+        });
+
+        const skewTargets = gsap.utils.toArray<HTMLElement>("[data-skew]");
+        const clampSkew = gsap.utils.clamp(-7, 7);
+        const skewProxy = { skew: 0 };
+        const skewSetter = (value: number) => skewTargets.forEach((target) => {
+          target.style.transform = `skewX(${value}deg)`;
+        });
+        ScrollTrigger.create({
+          end: "max",
+          onUpdate: (self) => {
+            const skew = clampSkew(self.getVelocity() / -900);
+            if (Math.abs(skew) > Math.abs(skewProxy.skew)) {
+              skewProxy.skew = skew;
+              gsap.to(skewProxy, { duration: 0.6, ease: "power3", onUpdate: () => skewSetter(skewProxy.skew), overwrite: true, skew: 0 });
+            }
+          },
+          start: 0,
+        });
+
+        const slashLayer = shell.querySelector<HTMLElement>("[data-slashes]");
+        let lastSlashY = window.scrollY;
+        ScrollTrigger.create({
+          end: "max",
+          onUpdate: (self) => {
+            const y = self.scroll();
+            if (!slashLayer || Math.abs(y - lastSlashY) < 480) return;
+            lastSlashY = y;
+            if (slashLayer.childElementCount > 2) return;
+            const slash = document.createElement("span");
+            slash.className = "scroll-slash";
+            slash.style.top = `${6 + Math.random() * 82}%`;
+            slash.style.transform = `rotate(${-26 + Math.random() * 14}deg)`;
+            slashLayer.appendChild(slash);
+            gsap.fromTo(slash, { opacity: 0, scaleX: 0 }, {
+              duration: 0.22,
+              ease: "power4.in",
+              onComplete: () => {
+                gsap.to(slash, { delay: 0.18, duration: 0.5, onComplete: () => slash.remove(), opacity: 0 });
+              },
+              opacity: 1,
+              scaleX: 1,
+            });
+          },
+          start: 0,
+        });
+        cleanups.push(() => {
+          if (slashLayer) slashLayer.innerHTML = "";
         });
         gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((element) => {
           gsap.from(element, { autoAlpha: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { once: true, start: "top 88%", trigger: element }, y: 26 });
@@ -308,6 +368,9 @@ export default function SeasonExperience() {
               visited.add(target);
               window.dispatchEvent(new CustomEvent("season:unlock", { detail: achievements[target] }));
             }
+            if (self.isActive && finePointer) {
+              gsap.fromTo(section, { x: 0 }, { clearProps: "x", duration: 0.05, repeat: 3, x: 3, yoyo: true });
+            }
           },
           start: "top 45%",
           trigger: section,
@@ -376,14 +439,35 @@ export default function SeasonExperience() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    const shell = root.current;
+    if (!shell || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const trigger = shell.querySelector<HTMLElement>("[data-profile-trigger]");
+    if (!trigger) return;
+    const onClick = () => {
+      const frame = trigger.querySelector<HTMLElement>("[data-profile-frame]");
+      const scan = trigger.querySelector<HTMLElement>(".profile-portrait-scan");
+      const ghost = trigger.querySelector<HTMLElement>("[data-profile-ghost]");
+      const timeline = createTimeline({ defaults: { ease: "outExpo" } });
+      if (frame) timeline.add(frame, { duration: 700, rotate: [-2, 2, -1.2, 0], scale: [1, 0.965, 1.02, 1] }, 0);
+      if (scan) timeline.add(scan, { duration: 650, ease: "inOutQuad", top: ["-34%", "100%"] }, 0);
+      if (ghost) timeline.add(ghost, { duration: 700, opacity: [0.38, 0.72, 0.38] }, 0);
+    };
+    trigger.addEventListener("click", onClick);
+    return () => trigger.removeEventListener("click", onClick);
+  }, []);
+
   return (
     <div className="season-root" id="top" ref={root}>
+      {!booted ? <Opener onDone={() => setBooted(true)} /> : null}
       <div aria-hidden="true" className="season-progress"><span data-season-progress /></div>
+      <div aria-hidden="true" className="slash-layer" data-slashes />
       <header className="season-header">
+        <span aria-hidden="true" className="header-slash" />
         <div className="season-header-inner">
           <a className="season-logo" data-cursor-label="home" data-magnetic href="#top" onClick={() => setMenuOpen(false)}>
             <span>YS</span>
-            <strong>season 01</strong>
+            <strong>folio — 26</strong>
           </a>
           <nav aria-label="Season navigation" className="season-nav">
             {navItems.map((item) => <a data-cursor-label="open" data-nav-target={item.href} href={item.href} key={item.href}><span className="roll"><span>{item.label}</span><span aria-hidden="true">{item.label}</span></span></a>)}
@@ -399,7 +483,8 @@ export default function SeasonExperience() {
       <main>
         <section className="op-hero" data-section="home" data-speedhero>
           <SpeedLines />
-          <div className="op-hero-top" data-herometa><span>SEASON 01</span><span>ACCRA / GHANA</span></div>
+          <div className="op-hero-top" data-herometa><span>EST. 2026</span><span>ACCRA / GHANA</span></div>
+          <div aria-hidden="true" className="moon-mark" data-herometa />
           <h1 className="op-title">
             <span className="op-line">{Array.from("YUSSIF").map((character, index) => <span data-herochars key={`y-${index}`}>{character}</span>)}</span>
             <span className="op-line">{Array.from("SARE").map((character, index) => <span className="op-outline" data-herochars key={`s-${index}`}>{character}</span>)}</span>
@@ -411,15 +496,23 @@ export default function SeasonExperience() {
             <a className="op-ghost" data-cursor-label="say hi" href="#contact">transmission</a>
           </div>
           <div aria-hidden="true" className="op-badge" data-herometa>
-            <svg viewBox="0 0 120 120"><defs><path d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" id="badge-circle" /></defs><text><textPath href="#badge-circle">OPEN FOR WORK • SEASON 01 • OPEN FOR WORK • </textPath></text></svg>
+            <svg viewBox="0 0 120 120"><defs><path d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" id="badge-circle" /></defs><text><textPath href="#badge-circle">OPEN FOR WORK • YUSSIF SARE • OPEN FOR WORK • </textPath></text></svg>
           </div>
           <div className="op-scroll" data-herometa><span>SCROLL</span><i /></div>
         </section>
 
         <section className="episode" data-section="profile" id="profile">
           <span aria-hidden="true" className="ep-ghost" data-ghostnum>01</span>
-          <div className="episode-head" data-reveal><span>EP.01</span><h2 data-wipe-heading>ORIGIN<br /><em>STORY</em></h2></div>
-          <div className="episode-grid episode-grid-solo">
+          <div className="episode-head" data-reveal><span>EP.01</span><h2 data-wipe-heading data-skew>ORIGIN<br /><em>STORY</em></h2></div>
+          <div className="episode-grid">
+            <button aria-label="Replay portrait animation" className="profile-portrait" data-profile-trigger type="button">
+              <div className="profile-portrait-ghost" aria-hidden="true" data-profile-ghost />
+              <div className="profile-portrait-frame" data-profile-frame>
+                <Image alt="Portrait of Yussif Sare" fill priority={false} sizes="(max-width: 820px) 86vw, 340px" src="/profile.jpg" />
+                <span aria-hidden="true" className="profile-portrait-scan" />
+              </div>
+              <div className="profile-portrait-meta"><span>ys / 001</span><span>click to replay</span></div>
+            </button>
             <div className="episode-copy" data-reveal>
               <p className="episode-lede">“{githubProfile.bio}.” — that&apos;s Dave, aka {githubProfile.username}, studying at Accra Technical University with {githubProfile.publicRepos} public repos and counting.</p>
               <p>From C systems and Python hardware hacks to interfaces people actually touch — this season is the frontend cut.</p>
@@ -432,11 +525,11 @@ export default function SeasonExperience() {
 
         <section className="episode" data-section="arsenal" id="arsenal">
           <span aria-hidden="true" className="ep-ghost" data-ghostnum>02</span>
-          <div className="episode-head" data-reveal><span>EP.02</span><h2 data-wipe-heading>THE<br /><em>ARSENAL</em></h2></div>
+          <div className="episode-head" data-reveal><span>EP.02</span><h2 data-wipe-heading data-skew>THE<br /><em>ARSENAL</em></h2></div>
           <div className="stat-list">
             {stats.map((stat) => (
               <div className="stat-row" data-reveal key={stat.name}>
-                <div className="stat-top"><span>{stat.name}</span></div>
+                <div className="stat-top"><span>{stat.name}</span><span>{stat.value}</span></div>
                 <div className="stat-track"><i data-stat-fill={stat.value} /></div>
                 <small>{stat.flavor}</small>
               </div>
@@ -446,12 +539,12 @@ export default function SeasonExperience() {
 
         <section className="episode" data-section="quests" id="quests">
           <span aria-hidden="true" className="ep-ghost" data-ghostnum>03</span>
-          <div className="episode-head" data-reveal><span>EP.03</span><h2 data-wipe-heading>SIDE<br /><em>QUESTS</em></h2></div>
+          <div className="episode-head" data-reveal><span>EP.03</span><h2 data-wipe-heading data-skew>SIDE<br /><em>QUESTS</em></h2></div>
           <div className="quest-list">
             {quests.map((quest) => (
               <a className="quest-row" data-cursor-label="accept quest" data-quest-row href={quest.repo} key={quest.id} rel="noreferrer" target="_blank">
                 <span className={`quest-rank rank-${quest.rank}`}>{quest.rank}</span>
-                <span className="quest-main"><strong>{quest.title}</strong><small>{quest.description}</small></span>
+                <span className="quest-main"><strong>{quest.title}</strong><small>{quest.description}</small>{quest.preview ? <span className="quest-preview"><Image alt={`${quest.title} preview`} height={120} src={quest.preview} width={192} /></span> : null}</span>
                 <span className="quest-genre">{quest.genre}</span>
                 <ArrowUpRight size={18} />
               </a>
@@ -459,11 +552,11 @@ export default function SeasonExperience() {
           </div>
         </section>
 
-        <div aria-hidden="true" className="op-ticker"><div className="op-ticker-track">{["YUSSIF SARE", "SEASON 01", "FRONTEND", "MOTION", "ACCRA / GHANA"].map((word) => <span key={word}>{word}<i>✦</i></span>)}{["YUSSIF SARE", "SEASON 01", "FRONTEND", "MOTION", "ACCRA / GHANA"].map((word) => <span key={`again-${word}`}>{word}<i>✦</i></span>)}</div></div>
+        <div aria-hidden="true" className="op-ticker"><div className="op-ticker-track">{["YUSSIF SARE", "FRONTEND DEVELOPER", "MOTION", "ACCRA / GHANA", "OPEN FOR WORK"].map((word) => <span key={word}>{word}<i>✦</i></span>)}{["YUSSIF SARE", "FRONTEND DEVELOPER", "MOTION", "ACCRA / GHANA", "OPEN FOR WORK"].map((word) => <span key={`again-${word}`}>{word}<i>✦</i></span>)}</div></div>
 
         <section className="episode" data-section="contact" id="contact">
           <span aria-hidden="true" className="ep-ghost" data-ghostnum>04</span>
-          <div className="episode-head" data-reveal><span>FINAL</span><h2 data-wipe-heading>SEND A<br /><em>SIGNAL</em></h2></div>
+          <div className="episode-head" data-reveal><span>FINAL</span><h2 data-wipe-heading data-skew>SEND A<br /><em>SIGNAL</em></h2></div>
           <div className="episode-copy" data-reveal>
             <p className="episode-lede">Got a quest, a role, or a weird idea? My inbox is the next episode.</p>
             <div className="contact-rows">
