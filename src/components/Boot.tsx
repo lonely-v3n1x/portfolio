@@ -59,7 +59,11 @@ export default function Boot({ onDone }: BootProps) {
   }, [onDone]);
 
   useEffect(() => {
-    document.getElementById("splash")?.remove();
+    const splash = document.getElementById("splash");
+    if (splash) {
+      splash.style.display = "none";
+      splash.setAttribute("aria-hidden", "true");
+    }
   }, []);
 
   const settle = useCallback(() => {
