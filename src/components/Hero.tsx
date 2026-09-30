@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap, useGSAP, isReducedMotion, splitTextToChars } from "@/lib/animations";
 import Ticker from "./Ticker";
@@ -17,6 +17,17 @@ const PUSH = 54;
 const SKEW_MAX = 6.5;
 const SKEW_GAIN = 11;
 const SKEW_SETTLE = 140;
+const TILT_RANGE = 12;
+
+type OrientationEventConstructor = {
+  requestPermission?: () => Promise<string>;
+};
+
+function orientationSupported(): boolean {
+  if (typeof window === "undefined") return false;
+  if (!window.matchMedia("(pointer: coarse)").matches) return false;
+  return "DeviceOrientationEvent" in window;
+}
 
 // Gradient must match ThreeField's .field background or the chunk swap flashes.
 function ThreeFieldPlaceholder() {
@@ -152,6 +163,66 @@ export default function Hero() {
   useMagnetic(rootRef);
   useRipple(rootRef);
 
+  const [tiltReady, setTiltReady] = useState(false);
+  const [tiltOn, setTiltOn] = useState(false);
+
+  useGSAP(
+    () => {
+      setTiltReady(orientationSupported() && !isReducedMotion());
+    },
+    { scope: rootRef },
+  );
+
+  useGSAP(
+    () => {
+      if (!tiltOn || isReducedMotion()) return;
+      const root = rootRef.current;
+      const inner = root?.querySelector<HTMLElement>(".hero__inner");
+      const cue = root?.querySelector<HTMLElement>(".hero__cue");
+      if (!root || !inner) return;
+      const innerX = gsap.quickTo(inner, "x", { duration: 0.9, ease: "power3.out" });
+      const innerY = gsap.quickTo(inner, "y", { duration: 0.9, ease: "power3.out" });
+      const cueX = cue
+        ? gsap.quickTo(cue, "x", { duration: 1.1, ease: "power3.out" })
+        : null;
+      const cueY = cue
+        ? gsap.quickTo(cue, "y", { duration: 1.1, ease: "power3.out" })
+        : null;
+      const onTilt = (event: DeviceOrientationEvent): void => {
+        if (event.gamma === null || event.beta === null) return;
+        const px = gsap.utils.clamp(-1, 1, event.gamma / 30);
+        const py = gsap.utils.clamp(-1, 1, (event.beta - 40) / 30);
+        innerX(px * TILT_RANGE);
+        innerY(py * TILT_RANGE);
+        cueX?.(-px * TILT_RANGE * 1.5);
+        cueY?.(-py * TILT_RANGE * 1.5);
+      };
+      window.addEventListener("deviceorientation", onTilt);
+      return () => {
+        window.removeEventListener("deviceorientation", onTilt);
+        gsap.set([inner, cue], { clearProps: "transform" });
+      };
+    },
+    { scope: rootRef, dependencies: [tiltOn] },
+  );
+
+  const enableTilt = (): void => {
+    const ctor = window.DeviceOrientationEvent as unknown as
+      | OrientationEventConstructor
+      | undefined;
+    const request = ctor?.requestPermission;
+    if (typeof request === "function") {
+      request
+        .call(ctor)
+        .then((result) => {
+          if (result === "granted") setTiltOn(true);
+        })
+        .catch(() => undefined);
+      return;
+    }
+    setTiltOn(true);
+  };
+
   useGSAP(
     () => {
       if (isReducedMotion()) return;
@@ -245,6 +316,30 @@ export default function Hero() {
           </span>
           Scroll
         </a>
+
+        {tiltReady && !tiltOn ? (
+          <button
+            type="button"
+            onClick={enableTilt}
+            style={{
+              position: "absolute",
+              right: "var(--pad)",
+              bottom: "clamp(1.5rem, 4vh, 2.5rem)",
+              zIndex: 2,
+              border: "1px solid var(--line)",
+              borderRadius: 999,
+              background: "color-mix(in srgb, var(--night) 70%, transparent)",
+              padding: "0.55rem 1rem",
+              fontFamily: "var(--font-dm-mono)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "var(--acid)",
+            }}
+          >
+            Enable tilt
+          </button>
+        ) : null}
 
         <style jsx>{`
           .hero {

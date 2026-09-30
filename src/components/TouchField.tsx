@@ -18,10 +18,13 @@ const DRIFT = 0.05;
 const RIPPLE_LIFE = 900;
 const RIPPLE_REACH = 190;
 const MAX_RIPPLES = 5;
+const TRAIL_LIFE = 650;
+const TRAIL_MAX = 16;
 const EDGE = 8;
 
 type Tint = { r: number; g: number; b: number };
 type Point = { x: number; y: number };
+type TrailPoint = Point & { t: number };
 
 type Particle = Point & {
   vx: number;
@@ -130,6 +133,7 @@ export default function TouchField() {
     let h = 0;
     let particles: Particle[] = [];
     let ripples: Ripple[] = [];
+    const trails = new Map<number, TrailPoint[]>();
     let frame = 0;
     let last = 0;
     let onScreen = false;
@@ -186,6 +190,7 @@ export default function TouchField() {
       paintBase();
       seed(density(w, h));
       ripples = [];
+      trails.clear();
       if (reduced) draw(0);
     };
 
@@ -229,6 +234,27 @@ export default function TouchField() {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      ctx.strokeStyle = rgba(acid, 1);
+      ctx.lineCap = "round";
+      for (const points of trails.values()) {
+        for (let i = 1; i < points.length; i += 1) {
+          const prev = points[i - 1];
+          const curr = points[i];
+          const age = (time - curr.t) / TRAIL_LIFE;
+          if (age >= 1) continue;
+          ctx.globalAlpha = (1 - age) * 0.5;
+          ctx.lineWidth = 1 + (1 - age) * 2.5;
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(curr.x, curr.y);
+          ctx.stroke();
+        }
+      }
+      for (const [id, points] of trails) {
+        while (points.length > 0 && time - points[0].t > TRAIL_LIFE) points.shift();
+        if (points.length === 0) trails.delete(id);
       }
 
       ctx.globalAlpha = 1;
@@ -307,12 +333,23 @@ export default function TouchField() {
       }
     };
 
+    const pushTrail = (id: number, point: Point) => {
+      let trail = trails.get(id);
+      if (!trail) {
+        trail = [];
+        trails.set(id, trail);
+      }
+      trail.push({ ...point, t: performance.now() });
+      while (trail.length > TRAIL_MAX) trail.shift();
+    };
+
     const onTouchStart = (event: TouchEvent) => {
       if (!live()) return;
       for (const touch of event.changedTouches) {
         const point = localPoint(touch.clientX, touch.clientY);
         if (!point) continue;
         pointers.set(touch.identifier, point);
+        pushTrail(touch.identifier, point);
         spawn(point);
       }
     };
@@ -325,6 +362,7 @@ export default function TouchField() {
         if (!point || !previous) continue;
         stir(point, (point.x - previous.x) * 0.35, (point.y - previous.y) * 0.35);
         pointers.set(touch.identifier, point);
+        pushTrail(touch.identifier, point);
       }
     };
 
@@ -335,13 +373,17 @@ export default function TouchField() {
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType === "touch" || !live()) return;
       const point = localPoint(event.clientX, event.clientY);
-      if (point) spawn(point);
+      if (!point) return;
+      pushTrail(event.pointerId, point);
+      spawn(point);
     };
 
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType === "touch" || !live()) return;
       const point = localPoint(event.clientX, event.clientY);
-      if (point) stir(point, 0, 0);
+      if (!point) return;
+      stir(point, 0, 0);
+      pushTrail(event.pointerId, point);
     };
 
     if (!reduced) {
@@ -387,6 +429,7 @@ export default function TouchField() {
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       pointers.clear();
+      trails.clear();
       particles = [];
       ripples = [];
       canvas.remove();
