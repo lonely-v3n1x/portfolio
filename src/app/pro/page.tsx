@@ -109,7 +109,7 @@ export default function ProPage() {
             maxWidth: "clamp(64rem, 90vw, 80rem)",
             margin: "0 auto",
           }}>
-            <a
+            <Link
               href="/"
               style={{
                 fontFamily: "var(--font-archivo-black)",
@@ -119,9 +119,9 @@ export default function ProPage() {
               }}
             >
               YS
-            </a>
+            </Link>
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
-              <a
+              <Link
                 href="/"
                 style={{
                   fontFamily: "var(--font-dm-mono)",
@@ -136,7 +136,7 @@ export default function ProPage() {
                 }}
               >
                 ← Main site
-              </a>
+              </Link>
               <a
                 href="https://github.com/lonely-v3n1x"
                 target="_blank"

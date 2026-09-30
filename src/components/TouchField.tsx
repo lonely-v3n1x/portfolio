@@ -6,9 +6,9 @@ import { useGSAP, isReducedMotion } from "@/lib/animations";
 /** Mirrors the WebGL fallback rule in ThreeField: 2D owns everything under this width. */
 const COARSE_MAX_WIDTH = 820;
 const DPR_CAP = 2;
-const AREA_PER_PARTICLE = 5200;
-const MIN_PARTICLES = 32;
-const MAX_PARTICLES = 140;
+const AREA_PER_PARTICLE = 3400;
+const MIN_PARTICLES = 48;
+const MAX_PARTICLES = 210;
 const STIR_RADIUS = 132;
 const STIR_PUSH = 2.4;
 const STIR_SPIN = 0.55;

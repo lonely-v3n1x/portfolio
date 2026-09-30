@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Archivo_Black, DM_Mono, Space_Grotesk } from "next/font/google";
 import JsonLd from "@/components/JsonLd";
@@ -85,10 +85,32 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0c0c11",
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html className={`${archivoBlack.variable} ${spaceGrotesk.variable} ${dmMono.variable}`} lang="en">
       <body>
+        <div
+          id="splash"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#0c0c11",
+            color: "#d8ff4f",
+            fontFamily: "monospace",
+            fontSize: "1.5rem",
+            letterSpacing: "0.1em",
+          }}
+        >
+          YS
+        </div>
         {children}
         <JsonLd />
       </body>

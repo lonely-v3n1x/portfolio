@@ -255,6 +255,7 @@ export default function Hero() {
             display: grid;
             align-content: end;
             min-height: 100svh;
+            min-height: 100dvh;
             padding: var(--pad);
             padding-bottom: clamp(4.5rem, 10vh, 7rem);
             overflow: hidden;
@@ -416,6 +417,7 @@ export default function Hero() {
           @media (max-width: 819px) {
             .hero {
               min-height: 92svh;
+              min-height: 92dvh;
             }
             .hero__meta {
               font-size: 0.62rem;

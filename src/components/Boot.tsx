@@ -58,6 +58,10 @@ export default function Boot({ onDone }: BootProps) {
     onDoneRef.current = onDone;
   }, [onDone]);
 
+  useEffect(() => {
+    document.getElementById("splash")?.remove();
+  }, []);
+
   const settle = useCallback(() => {
     if (settled.current) return;
     settled.current = true;

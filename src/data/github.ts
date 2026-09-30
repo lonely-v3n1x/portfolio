@@ -15,6 +15,7 @@ export interface Repo {
   description: string;
   url: string;
   previewUrl?: string;
+  previewImage?: string;
 }
 
 export interface SelectedWorkRepo extends Repo {
@@ -64,7 +65,7 @@ export const staticRepos: Repo[] = [
     name: "gitfetcher",
     language: "Python",
     stars: 0,
-    description: "A Python tool to fetch and analyze GitHub repository data",
+    description: "Fetch and inspect any GitHub user's profile and repos from the terminal.",
     url: "https://github.com/lonely-v3n1x/gitfetcher",
   },
   {
@@ -72,7 +73,7 @@ export const staticRepos: Repo[] = [
     name: "TUI_MusicPlayer",
     language: "C",
     stars: 0,
-    description: "A terminal-based music player built in C",
+    description: "A terminal UI music player in C — no window manager required, just rhythm and raw control.",
     url: "https://github.com/lonely-v3n1x/TUI_MusicPlayer",
   },
   {
@@ -80,31 +81,15 @@ export const staticRepos: Repo[] = [
     name: "contact-bat",
     language: "Python",
     stars: 0,
-    description: "A contact management system with batch file integration",
+    description: "A cat-like CLI for viewing .vcf contact files — small, sharp, and straight to the point.",
     url: "https://github.com/lonely-v3n1x/contact-bat",
-  },
-  {
-    id: "lvl200-Web-Dev",
-    name: "lvl200-Web-Dev",
-    language: "PHP",
-    stars: 2,
-    description: "Level 200 web development project showcasing PHP skills",
-    url: "https://github.com/lonely-v3n1x/lvl200-Web-Dev",
-  },
-  {
-    id: "VehicleRentalSystem",
-    name: "VehicleRentalSystem",
-    language: "Java",
-    stars: 0,
-    description: "A vehicle rental management system built with Java",
-    url: "https://github.com/lonely-v3n1x/VehicleRentalSystem",
   },
   {
     id: "ELK_BLE-CONTROL",
     name: "ELK_BLE-CONTROL",
     language: "Python",
     stars: 1,
-    description: "Bluetooth Low Energy control system for ELK devices",
+    description: "A Python script that drives LED strips over Bluetooth — software you can literally see.",
     url: "https://github.com/lonely-v3n1x/ELK_BLE-CONTROL",
   },
   {
@@ -112,16 +97,24 @@ export const staticRepos: Repo[] = [
     name: "ghpostserver",
     language: "Python",
     stars: 0,
-    description: "A Python server for handling GitHub post operations",
+    description: "A Ghana Post digital-address lookup website — the server-side root of FindMe.",
     url: "https://github.com/lonely-v3n1x/ghpostserver",
   },
   {
-    id: "ShopReceipt_Group_3",
-    name: "ShopReceipt_Group_3",
-    language: "Java",
-    stars: 1,
-    description: "A shop receipt generation system - Group 3 project",
-    url: "https://github.com/lonely-v3n1x/ShopReceipt_Group_3",
+    id: "grub-theme",
+    name: "grub-theme",
+    language: "Shell",
+    stars: 0,
+    description: "A personalized GRUB boot theme — your machine greets you with style before the OS loads.",
+    url: "https://github.com/lonely-v3n1x/grub-theme",
+  },
+  {
+    id: "bookorbit",
+    name: "bookorbit",
+    language: "TypeScript",
+    stars: 0,
+    description: "BookOrbit — your reading space: a forked ebook reader setup for the personal library.",
+    url: "https://github.com/lonely-v3n1x/bookorbit",
   },
 ];
 
@@ -129,12 +122,11 @@ export const selectedWorkRepos: SelectedWorkRepo[] = [
   { ...staticRepos[0], rank: 1, genre: "Web App" },
   { ...staticRepos[2], rank: 2, genre: "Application" },
   { ...staticRepos[3], rank: 3, genre: "Utility" },
-  { ...staticRepos[6], rank: 4, genre: "IoT" },
-  { ...staticRepos[7], rank: 5, genre: "Server" },
+  { ...staticRepos[4], rank: 4, genre: "IoT" },
+  { ...staticRepos[5], rank: 5, genre: "Server" },
   { ...staticRepos[1], rank: 6, genre: "CLI Tool" },
-  { ...staticRepos[4], rank: 7, genre: "Web Development" },
-  { ...staticRepos[5], rank: 8, genre: "System" },
-  { ...staticRepos[8], rank: 9, genre: "System" },
+  { ...staticRepos[6], rank: 7, genre: "System" },
+  { ...staticRepos[7], rank: 8, genre: "Interface" },
 ];
 
 export async function fetchGitHubData(): Promise<{
