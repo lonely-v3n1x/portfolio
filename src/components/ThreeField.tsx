@@ -1,188 +1,296 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
+import { useRef } from "react";
+import {
+  AdditiveBlending,
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  Mesh,
+  MeshBasicMaterial,
+  PerspectiveCamera,
+  Points,
+  PointsMaterial,
+  RingGeometry,
+  Scene,
+  Vector3,
+  WebGLRenderer,
+} from "three";
+import { gsap, useGSAP, ScrollTrigger, isReducedMotion } from "@/lib/animations";
+import TouchField from "./TouchField";
 
-type Ring = { mesh: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>; age: number };
+const DENSITY = { desktop: 650, mobile: 260 };
+const MIN_WIDTH = 820;
+const DOLLY_ID = "three-field-dolly";
+const PAPER = new Color(0xf3f0e8);
+const ACID = new Color(0xd8ff4f);
+const COBALT = new Color(0x4357ff);
+
+/** null => below the 820px breakpoint, the CSS gradient fallback owns the surface. */
+function density(): number | null {
+  if (window.innerWidth < MIN_WIDTH) return null;
+  return window.matchMedia("(pointer: coarse)").matches ? DENSITY.mobile : DENSITY.desktop;
+}
+
+function buildCloud(count: number): BufferGeometry {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const tint = new Color();
+
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 1.4 + Math.pow(Math.random(), 0.72) * 2.4;
+    positions[i * 3] = Math.cos(angle) * radius;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 3.4;
+    positions[i * 3 + 2] = Math.sin(angle) * radius * 0.6 - 0.9;
+
+    tint.copy(PAPER).lerp(ACID, Math.pow(Math.random(), 2.2) * 0.85);
+    if (Math.random() > 0.9) tint.lerp(COBALT, 0.6);
+    colors[i * 3] = tint.r;
+    colors[i * 3 + 1] = tint.g;
+    colors[i * 3 + 2] = tint.b;
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new BufferAttribute(colors, 3));
+  return geometry;
+}
 
 export default function ThreeField() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mountRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const hero = canvas.closest<HTMLElement>(".archive-hero");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  useGSAP(() => {
+    const mount = mountRef.current;
+    if (!mount) return;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, canvas });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    let dispose: (() => void) | null = null;
+    let tier = density();
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-    camera.position.z = 8;
+    const mountField = () => {
+      const count = density();
+      if (count === null) return;
+      const reduced = isReducedMotion();
+      const aim = { x: 0, y: 0 };
+      const dolly = { now: 0, target: 0 };
+      const rings: Mesh[] = [];
+      const pulses: { scale: number; opacity: number }[] = [];
+      let frame = 0;
+      let onScreen = false;
 
-    const group = new THREE.Group();
-    scene.add(group);
-
-    const mobile = window.matchMedia("(max-width: 820px)").matches;
-    const COUNT = mobile ? 260 : 650;
-    const base = new Float32Array(COUNT * 3);
-    const phases = new Float32Array(COUNT);
-    const speeds = new Float32Array(COUNT);
-    const positions = new Float32Array(COUNT * 3);
-    const colors = new Float32Array(COUNT * 3);
-    const cobalt = new THREE.Color("#4357ff");
-    const ink = new THREE.Color("#141414");
-    const mist = new THREE.Color("#9a968c");
-
-    for (let i = 0; i < COUNT; i += 1) {
-      base[i * 3] = (Math.random() - 0.5) * 16;
-      base[i * 3 + 1] = (Math.random() - 0.5) * 10;
-      base[i * 3 + 2] = (Math.random() - 0.5) * 6;
-      phases[i] = Math.random() * Math.PI * 2;
-      speeds[i] = 0.3 + Math.random() * 0.7;
-      const roll = Math.random();
-      const color = roll < 0.68 ? cobalt : roll < 0.88 ? ink : mist;
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({ depthWrite: false, opacity: 0.62, size: 0.045, sizeAttenuation: true, transparent: true, vertexColors: true });
-    const points = new THREE.Points(geometry, material);
-    group.add(points);
-
-    const ringGeometry = new THREE.RingGeometry(0.48, 0.55, 48);
-    const rings: Ring[] = [];
-    let boost = 0;
-    let pointerX = 0;
-    let pointerY = 0;
-
-    const resize = () => {
-      const width = Math.max(1, canvas.clientWidth);
-      const height = Math.max(1, canvas.clientHeight);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    };
-    resize();
-
-    const spawnRing = (clientX: number, clientY: number) => {
-      const rect = canvas.getBoundingClientRect();
-      const normalX = ((clientX - rect.left) / rect.width) * 2 - 1;
-      const normalY = -((clientY - rect.top) / rect.height) * 2 + 1;
-      const point = new THREE.Vector3(normalX, normalY, 0.5).unproject(camera);
-      const direction = point.sub(camera.position).normalize();
-      const distance = -camera.position.z / direction.z;
-      const ringMaterial = new THREE.MeshBasicMaterial({ color: "#4357ff", opacity: 0.75, side: THREE.DoubleSide, transparent: true });
-      const mesh = new THREE.Mesh(ringGeometry, ringMaterial);
-      mesh.position.copy(camera.position).add(direction.multiplyScalar(distance));
-      mesh.scale.setScalar(0.25);
-      group.add(mesh);
-      rings.push({ age: 0, mesh });
-      boost = 1;
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      pointerX = (event.clientX / window.innerWidth - 0.5) * 2;
-      pointerY = (event.clientY / window.innerHeight - 0.5) * 2;
-    };
-    const onPointerDown = (event: PointerEvent) => spawnRing(event.clientX, event.clientY);
-
-    let frame = 0;
-    let last = performance.now();
-    const render = (now: number) => {
-      const delta = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const time = now / 1000;
-      boost = Math.max(0, boost - delta * 1.1);
-      const scrollT = Math.min(1, window.scrollY / Math.max(1, window.innerHeight));
-      camera.position.z = 8 - scrollT * 1.6;
-      group.rotation.y += delta * (0.05 + boost * 0.35);
-      group.rotation.x += ((pointerY * 0.12) - group.rotation.x) * 0.04;
-      group.rotation.z += ((pointerX * 0.05) - group.rotation.z) * 0.04;
-
-      const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-      for (let i = 0; i < COUNT; i += 1) {
-        const speed = speeds[i] * (1 + boost * 3);
-        position.setXYZ(
-          i,
-          base[i * 3] + Math.sin(time * speed * 0.6 + phases[i]) * 0.35,
-          base[i * 3 + 1] + Math.sin(time * speed + phases[i]) * 0.45,
-          base[i * 3 + 2],
-        );
+      let renderer: WebGLRenderer;
+      try {
+        renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+      } catch {
+        return;
       }
-      position.needsUpdate = true;
 
-      for (let i = rings.length - 1; i >= 0; i -= 1) {
-        const ring = rings[i];
-        ring.age += delta;
-        const life = ring.age / 0.9;
-        ring.mesh.scale.setScalar(0.25 + ring.age * 4.2);
-        ring.mesh.material.opacity = Math.max(0, 0.75 * (1 - life));
-        if (life >= 1) {
-          group.remove(ring.mesh);
-          ring.mesh.material.dispose();
-          rings.splice(i, 1);
+      const scene = new Scene();
+      const camera = new PerspectiveCamera(55, 1, 0.1, 60);
+      camera.position.set(0, 0, 4.8);
+
+      const geometry = buildCloud(count);
+      const material = new PointsMaterial({
+        size: 0.05,
+        sizeAttenuation: true,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      });
+      const cloud = new Points(geometry, material);
+      scene.add(cloud);
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+      mount.appendChild(renderer.domElement);
+
+      const resize = () => {
+        const box = mount.getBoundingClientRect();
+        if (box.width < 1 || box.height < 1) return;
+        camera.aspect = box.width / box.height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(box.width, box.height, false);
+      };
+      resize();
+      const boxWatcher = new ResizeObserver(resize);
+      boxWatcher.observe(mount);
+
+      const draw = (time: number) => {
+        dolly.now += (dolly.target - dolly.now) * 0.09;
+        camera.position.x += (aim.x * 0.65 - camera.position.x) * 0.07;
+        camera.position.y += (aim.y * 0.45 - camera.position.y) * 0.07;
+        camera.position.z = 4.8 - dolly.now * 2;
+        camera.lookAt(0, 0, 0);
+        cloud.rotation.y = time * 0.00005 + aim.x * 0.09;
+        cloud.rotation.x = aim.y * -0.07;
+        material.opacity = 0.92 - dolly.now * 0.5;
+        renderer.render(scene, camera);
+      };
+
+      const tick = (time: number) => {
+        frame = requestAnimationFrame(tick);
+        draw(time);
+      };
+      const sync = () => {
+        const live = !reduced && onScreen && !document.hidden;
+        if (live === (frame !== 0)) return;
+        if (live) {
+          frame = requestAnimationFrame(tick);
+        } else {
+          cancelAnimationFrame(frame);
+          frame = 0;
         }
+      };
+      const onVisibility = () => sync();
+      document.addEventListener("visibilitychange", onVisibility);
+
+      const gate = new IntersectionObserver(
+        ([entry]) => {
+          onScreen = entry.isIntersecting;
+          sync();
+        },
+        { threshold: 0 },
+      );
+      gate.observe(mount);
+      if (reduced) draw(0);
+
+      const pulse = (nx: number, ny: number) => {
+        const spot = new Vector3(nx, ny, 0.5).unproject(camera);
+        const ring = new Mesh(
+          new RingGeometry(0.5, 0.56, 64),
+          new MeshBasicMaterial({
+            color: ACID,
+            transparent: true,
+            opacity: 0.9,
+            depthWrite: false,
+            blending: AdditiveBlending,
+          }),
+        );
+        ring.position.set(spot.x, spot.y, 0.5);
+        scene.add(ring);
+        const state = { scale: 0.1, opacity: 0.9 };
+        rings.push(ring);
+        pulses.push(state);
+        gsap.to(state, {
+          scale: 2.8,
+          opacity: 0,
+          duration: 1.3,
+          ease: "expo.out",
+          onUpdate: () => {
+            ring.scale.setScalar(state.scale);
+            (ring.material as MeshBasicMaterial).opacity = state.opacity;
+          },
+          onComplete: () => {
+            ring.geometry.dispose();
+            (ring.material as MeshBasicMaterial).dispose();
+            scene.remove(ring);
+            rings.splice(rings.indexOf(ring), 1);
+            pulses.splice(pulses.indexOf(state), 1);
+          },
+        });
+      };
+
+      const onMove = (event: PointerEvent) => {
+        aim.x = (event.clientX / window.innerWidth) * 2 - 1;
+        aim.y = -((event.clientY / window.innerHeight) * 2 - 1);
+      };
+      const onDown = (event: PointerEvent) => {
+        const box = mount.getBoundingClientRect();
+        if (event.clientX < box.left || event.clientX > box.right) return;
+        if (event.clientY < box.top || event.clientY > box.bottom) return;
+        pulse(
+          ((event.clientX - box.left) / box.width) * 2 - 1,
+          -((event.clientY - box.top) / box.height) * 2 + 1,
+        );
+      };
+      if (!reduced) {
+        window.addEventListener("pointermove", onMove, { passive: true });
+        window.addEventListener("pointerdown", onDown, { passive: true });
       }
 
-      renderer.render(scene, camera);
-      frame = requestAnimationFrame(render);
+      const dollyTrigger = ScrollTrigger.create({
+        id: DOLLY_ID,
+        trigger: mount,
+        start: "top top",
+        end: "bottom top",
+        onUpdate: (self) => {
+          dolly.target = self.progress;
+        },
+        onRefresh: resize,
+      });
+
+      dispose = () => {
+        if (frame) cancelAnimationFrame(frame);
+        frame = 0;
+        gate.disconnect();
+        boxWatcher.disconnect();
+        dollyTrigger.kill();
+        document.removeEventListener("visibilitychange", onVisibility);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerdown", onDown);
+        for (const state of pulses) gsap.killTweensOf(state);
+        for (const ring of rings) {
+          ring.geometry.dispose();
+          (ring.material as MeshBasicMaterial).dispose();
+        }
+        rings.length = 0;
+        pulses.length = 0;
+        geometry.dispose();
+        material.dispose();
+        scene.clear();
+        renderer.dispose();
+        renderer.domElement.remove();
+      };
     };
 
-    const start = () => {
-      if (!frame) {
-        last = performance.now();
-        frame = requestAnimationFrame(render);
-      }
-    };
-    const stop = () => {
-      cancelAnimationFrame(frame);
-      frame = 0;
-    };
+    mountField();
 
-    window.addEventListener("resize", resize);
-    window.addEventListener("pointermove", onPointerMove);
-    (hero ?? canvas).addEventListener("pointerdown", onPointerDown);
-
-    let observer: IntersectionObserver | undefined;
-    if (reducedMotion) {
-      render(performance.now());
-      stop();
-    } else {
-      observer = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) start();
-        else stop();
-      }, { threshold: 0.02 });
-      observer.observe(canvas);
-    }
+    const tierWatcher = new ResizeObserver(() => {
+      const next = density();
+      if (next === tier) return;
+      tier = next;
+      dispose?.();
+      dispose = null;
+      mount.replaceChildren();
+      mountField();
+    });
+    tierWatcher.observe(mount);
 
     return () => {
-      stop();
-      observer?.disconnect();
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("pointermove", onPointerMove);
-      (hero ?? canvas).removeEventListener("pointerdown", onPointerDown);
-      rings.forEach((ring) => {
-        group.remove(ring.mesh);
-        ring.mesh.material.dispose();
-      });
-      scene.traverse((object) => {
-        if (object instanceof THREE.Points) {
-          object.geometry.dispose();
-          const pointMaterial = object.material as THREE.Material;
-          pointMaterial.dispose();
-        }
-      });
-      ringGeometry.dispose();
-      material.dispose();
-      renderer.dispose();
+      tierWatcher.disconnect();
+      dispose?.();
     };
-  }, []);
+  });
 
-  return <canvas aria-hidden="true" className="three-field" ref={canvasRef} />;
+  return (
+    <div className="field" aria-hidden="true">
+      <TouchField />
+      <div className="field__gl" ref={mountRef} />
+      <style jsx>{`
+        .field {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          overflow: hidden;
+          pointer-events: none;
+          background:
+            radial-gradient(120% 92% at 20% 14%, rgba(67, 87, 255, 0.32), transparent 62%),
+            radial-gradient(88% 70% at 82% 78%, rgba(216, 255, 79, 0.16), transparent 64%),
+            radial-gradient(70% 60% at 52% 46%, rgba(255, 49, 49, 0.12), transparent 72%),
+            var(--night);
+        }
+        .field__gl {
+          position: absolute;
+          inset: 0;
+        }
+        .field :global(canvas) {
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+      `}</style>
+    </div>
+  );
 }

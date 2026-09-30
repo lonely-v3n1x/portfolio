@@ -1,34 +1,44 @@
 "use client";
 
 import { useEffect } from "react";
-import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+// Native scroll only: Lenis smoothing was removed per owner request.
+// Scroll-driven animations (scrub reveals, progress bar) run off the
+// browser's own scroll position via ScrollTrigger + a passive listener.
+
 gsap.registerPlugin(ScrollTrigger);
 
-export default function SmoothScroll() {
+export function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const updateProgress = () => {
+      const scrollTop =
+        window.pageYOffset || document.documentElement.scrollTop;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent = docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0;
+      gsap.set(".smooth-scroll-progress", { scaleX: scrollPercent });
+    };
 
-    const lenis = new Lenis({
-      autoResize: true,
-      duration: 1.05,
-      smoothWheel: true,
-      syncTouch: false,
-    });
-    const unsubscribe = lenis.on("scroll", ScrollTrigger.update);
-    const raf = (time: number) => lenis.raf(time * 1000);
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
 
-    gsap.ticker.add(raf);
-    gsap.ticker.lagSmoothing(0);
+    // Recompute trigger positions once content + fonts settle
+    const refresh = window.setTimeout(() => ScrollTrigger.refresh(), 350);
 
     return () => {
-      unsubscribe();
-      gsap.ticker.remove(raf);
-      lenis.destroy();
+      window.clearTimeout(refresh);
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
     };
   }, []);
 
-  return null;
+  return (
+    <div className="smooth-scroll-wrapper">
+      <div className="smooth-scroll-progress" />
+      <main>{children}</main>
+    </div>
+  );
 }
