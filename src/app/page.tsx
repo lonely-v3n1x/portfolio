@@ -4,6 +4,7 @@ import { useState } from "react";
 import Boot from "@/components/Boot";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import CursorBubble from "@/components/CursorBubble";
+import TrailLayer from "@/components/TrailLayer";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
@@ -22,6 +23,7 @@ export default function Home() {
   return (
     <SmoothScroll>
       <CursorBubble />
+      <TrailLayer />
       <Header />
       <main>
         <Hero />
