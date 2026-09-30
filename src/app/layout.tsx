@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Archivo_Black, DM_Mono, Space_Grotesk } from "next/font/google";
 import JsonLd from "@/components/JsonLd";
+import Splash from "@/components/Splash";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -112,6 +113,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           YS
         </div>
         {children}
+        <Splash />
         <JsonLd />
       </body>
     </html>

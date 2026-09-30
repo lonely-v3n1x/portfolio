@@ -58,14 +58,6 @@ export default function Boot({ onDone }: BootProps) {
     onDoneRef.current = onDone;
   }, [onDone]);
 
-  useEffect(() => {
-    const splash = document.getElementById("splash");
-    if (splash) {
-      splash.style.display = "none";
-      splash.setAttribute("aria-hidden", "true");
-    }
-  }, []);
-
   const settle = useCallback(() => {
     if (settled.current) return;
     settled.current = true;
