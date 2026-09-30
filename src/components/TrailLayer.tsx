@@ -6,6 +6,7 @@ import { isReducedMotion } from "@/lib/animations";
 const DPR_CAP = 2;
 const TRAIL_LIFE = 650;
 const TRAIL_MAX = 16;
+const HEADER_CLEAR = 76;
 
 type TrailPoint = { x: number; y: number; t: number };
 
@@ -63,10 +64,11 @@ export default function TrailLayer() {
         for (let i = 1; i < points.length; i += 1) {
           const prev = points[i - 1];
           const curr = points[i];
+          if (prev.y < HEADER_CLEAR && curr.y < HEADER_CLEAR) continue;
           const age = (time - curr.t) / TRAIL_LIFE;
           if (age >= 1) continue;
-          ctx.globalAlpha = (1 - age) * 0.5;
-          ctx.lineWidth = 1 + (1 - age) * 2.5;
+          ctx.globalAlpha = (1 - age) * 0.6;
+          ctx.lineWidth = 1.2 + (1 - age) * 2.8;
           ctx.beginPath();
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(curr.x, curr.y);
@@ -144,7 +146,7 @@ export default function TrailLayer() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 40,
+        zIndex: 200,
         pointerEvents: "none",
       }}
     />
