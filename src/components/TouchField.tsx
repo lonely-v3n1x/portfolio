@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP, isReducedMotion } from "@/lib/animations";
+import { getMood, type Mood } from "@/lib/mood";
 
 /** Mirrors the WebGL fallback rule in ThreeField: 2D owns everything under this width. */
 const COARSE_MAX_WIDTH = 820;
@@ -31,6 +32,7 @@ type Particle = Point & {
   vy: number;
   r: number;
   tint: Tint;
+  target: Tint;
   alpha: number;
 };
 
@@ -127,6 +129,23 @@ export default function TouchField() {
       { px: 0.82, py: 0.78, rx: 0.88, ry: 0.7, stop: 0.64, tint: acid, alpha: 0.16 },
       { px: 0.52, py: 0.46, rx: 0.7, ry: 0.6, stop: 0.72, tint: red, alpha: 0.12 },
     ];
+    const blobGlow = blobs.map(() => 1);
+
+    let mood: Mood = getMood();
+    let moodClock = 0;
+
+    const moodAccent = (): Tint => {
+      if (mood.key === "dawn") return cobalt;
+      if (mood.key === "day") return paper;
+      if (mood.key === "dusk") return red;
+      return acid;
+    };
+
+    const moodTint = (): Tint => {
+      const base = mix(paper, acid, Math.pow(Math.random(), 2.2) * 0.85);
+      const seeded = Math.random() > 0.9 ? mix(base, cobalt, 0.6) : base;
+      return mix(seeded, moodAccent(), mood.warmth * 0.55);
+    };
 
     let dpr = 1;
     let w = 0;
@@ -149,24 +168,30 @@ export default function TouchField() {
       baseCtx.globalAlpha = 1;
       baseCtx.fillStyle = rgba(night, 1);
       baseCtx.fillRect(0, 0, w, h);
-      for (const blob of blobs) paintBlob(baseCtx, w, h, blob);
+      blobs.forEach((blob, i) => {
+        paintBlob(baseCtx, w, h, { ...blob, alpha: blob.alpha * (blobGlow[i] ?? 1) });
+      });
     };
 
     const seed = (count: number) => {
       particles = [];
       for (let i = 0; i < count; i += 1) {
-        const tint = mix(paper, acid, Math.pow(Math.random(), 2.2) * 0.85);
-        const tinted = Math.random() > 0.9 ? mix(tint, cobalt, 0.6) : tint;
+        const tint = moodTint();
         particles.push({
           x: Math.random() * w,
           y: Math.random() * h,
           vx: 0,
           vy: 0,
           r: 0.7 + Math.random() * 1.7,
-          tint: tinted,
+          tint,
+          target: tint,
           alpha: 0.25 + Math.random() * 0.5,
         });
       }
+    };
+
+    const retint = () => {
+      for (const p of particles) p.target = moodTint();
     };
 
     const resize = () => {
@@ -196,10 +221,28 @@ export default function TouchField() {
 
     const step = (dt: number) => {
       const decay = Math.pow(DRAG, dt * 60);
+      const ease = 1 - Math.exp(-dt * 1.5);
+      moodClock += dt;
+      if (moodClock > 30) {
+        moodClock = 0;
+        const next = getMood();
+        if (next.key !== mood.key) {
+          mood = next;
+          retint();
+        }
+      }
+      let repaint = false;
+      blobs.forEach((blob, i) => {
+        const cur = blobGlow[i] ?? 1;
+        const next = cur + (mood.glow - cur) * ease;
+        blobGlow[i] = next;
+        if (Math.abs(next - cur) > 0.0005) repaint = true;
+      });
+      if (repaint && w > 0) paintBase();
       for (const p of particles) {
-        p.vx *= decay;
+        p.tint = mix(p.tint, p.target, ease);        p.vx *= decay;
         p.vy *= decay;
-        p.vy -= DRIFT * dt;
+        p.vy -= DRIFT * mood.drift * dt;
         p.x += p.vx * dt * 60;
         p.y += p.vy * dt * 60;
 
@@ -229,7 +272,7 @@ export default function TouchField() {
 
       ctx.globalCompositeOperation = "lighter";
       for (const p of particles) {
-        ctx.globalAlpha = p.alpha;
+        ctx.globalAlpha = Math.min(1, p.alpha * mood.glow);
         ctx.fillStyle = rgba(p.tint, 1);
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -267,9 +310,9 @@ export default function TouchField() {
           ripples.splice(i, 1);
           continue;
         }
-        ctx.globalAlpha = (1 - t) * 0.85;
+        ctx.globalAlpha = Math.min(1, (1 - t) * 0.85 * mood.glow);
         ctx.beginPath();
-        ctx.arc(ripple.x, ripple.y, (1 - (1 - t) ** 3) * RIPPLE_REACH, 0, Math.PI * 2);
+        ctx.arc(ripple.x, ripple.y, Math.max(0, (1 - (1 - t) ** 3) * RIPPLE_REACH), 0, Math.PI * 2);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;

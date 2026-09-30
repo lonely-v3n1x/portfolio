@@ -15,7 +15,6 @@ export default function TrailLayer() {
 
   useEffect(() => {
     if (isReducedMotion()) return;
-    if (!window.matchMedia("(pointer: coarse)").matches) return;
     setEnabled(true);
   }, []);
 
@@ -104,6 +103,15 @@ export default function TrailLayer() {
       }
     };
 
+    const onPointerDown = (event: PointerEvent): void => {
+      if (event.pointerType === "touch") return;
+      push(event.pointerId, event.clientX, event.clientY);
+    };
+    const onPointerMove = (event: PointerEvent): void => {
+      if (event.pointerType === "touch") return;
+      push(event.pointerId, event.clientX, event.clientY);
+    };
+
     resize();
     frame = requestAnimationFrame(tick);
     window.addEventListener("resize", resize);
@@ -111,6 +119,8 @@ export default function TrailLayer() {
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
 
     return () => {
       cancelAnimationFrame(frame);
@@ -121,6 +131,8 @@ export default function TrailLayer() {
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
     };
   }, [enabled]);
 

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap, useGSAP, isReducedMotion, splitTextToChars } from "@/lib/animations";
+import { getMood } from "@/lib/mood";
 import Ticker from "./Ticker";
 import { useMagnetic, useRipple } from "./motion";
 
@@ -165,9 +166,11 @@ export default function Hero() {
 
   const [tiltReady, setTiltReady] = useState(false);
   const [tiltOn, setTiltOn] = useState(false);
+  const [moodLabel, setMoodLabel] = useState<string | null>(null);
 
   useGSAP(
     () => {
+      setMoodLabel(getMood().label);
       setTiltReady(orientationSupported() && !isReducedMotion());
     },
     { scope: rootRef },
@@ -281,6 +284,11 @@ export default function Hero() {
             <p className="hero__role" data-hero-reveal>
               Frontend / Motion
             </p>
+            {moodLabel ? (
+              <p className="hero__mood" data-hero-reveal>
+                — {moodLabel}
+              </p>
+            ) : null}
           </div>
 
           <h1 className="hero__title" ref={titleRef} aria-label="Yussif Sare">
