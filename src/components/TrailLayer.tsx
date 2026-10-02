@@ -78,7 +78,7 @@ export default function TrailLayer() {
         for (let i = 1; i < points.length; i += 1) {
           const prev = points[i - 1];
           const curr = points[i];
-          if (prev.y < HEADER_CLEAR && curr.y < HEADER_CLEAR) continue;
+          if (prev.y < HEADER_CLEAR || curr.y < HEADER_CLEAR) continue;
           const age = (time - curr.t) / TRAIL_LIFE;
           if (age >= 1) continue;
           ctx.globalAlpha = (1 - age) * 0.6;
