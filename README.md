@@ -2,7 +2,11 @@
 
 My personal site. Animated homepage for humans, plain `/pro` page for recruiters.
 
-**Live:** `main` deploys on Vercel — custom domain `yussifsare.is-a.dev` (via is-a.dev, pending DNS).
+**Live:** [yussifsare.is-a.dev](https://yussifsare.is-a.dev) (fallback: [portfolio on Vercel](https://portfolio-vert-psi-99.vercel.app))
+
+![Homepage hero with particle field](public/preview.png)
+
+Recruiters in a hurry: [skip to the plain pro page](https://yussifsare.is-a.dev/pro) — same info, zero animation.
 
 ## Routes
 
