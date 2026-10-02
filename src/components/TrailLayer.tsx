@@ -35,13 +35,27 @@ export default function TrailLayer() {
     let frame = 0;
     const trails = new Map<number, TrailPoint[]>();
 
+    // Touch coords are visual-viewport relative; the canvas spans the
+    // layout viewport. Map live or trails drift when chrome shows/hides.
+    const toCanvas = (clientX: number, clientY: number): { x: number; y: number } => {
+      const vv = window.visualViewport;
+      if (!vv) return { x: clientX, y: clientY };
+      return {
+        x: vv.offsetLeft + clientX * vv.scale,
+        y: vv.offsetTop + clientY * vv.scale,
+      };
+    };
+
     const resize = (): void => {
-      dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
-      w = window.innerWidth;
-      h = window.innerHeight;
+      const nextDpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      const nextW = window.innerWidth;
+      const nextH = window.innerHeight;
+      if (nextW === w && nextH === h && nextDpr === dpr && canvas.width > 0) return;
+      dpr = nextDpr;
+      w = nextW;
+      h = nextH;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      trails.clear();
     };
 
     const push = (id: number, x: number, y: number): void => {
@@ -90,12 +104,14 @@ export default function TrailLayer() {
 
     const onTouchStart = (event: TouchEvent): void => {
       for (const touch of event.changedTouches) {
-        push(touch.identifier, touch.clientX, touch.clientY);
+        const at = toCanvas(touch.clientX, touch.clientY);
+        push(touch.identifier, at.x, at.y);
       }
     };
     const onTouchMove = (event: TouchEvent): void => {
       for (const touch of event.changedTouches) {
-        push(touch.identifier, touch.clientX, touch.clientY);
+        const at = toCanvas(touch.clientX, touch.clientY);
+        push(touch.identifier, at.x, at.y);
       }
     };
     const onTouchEnd = (event: TouchEvent): void => {
@@ -107,11 +123,13 @@ export default function TrailLayer() {
 
     const onPointerDown = (event: PointerEvent): void => {
       if (event.pointerType === "touch") return;
-      push(event.pointerId, event.clientX, event.clientY);
+      const at = toCanvas(event.clientX, event.clientY);
+      push(event.pointerId, at.x, at.y);
     };
     const onPointerMove = (event: PointerEvent): void => {
       if (event.pointerType === "touch") return;
-      push(event.pointerId, event.clientX, event.clientY);
+      const at = toCanvas(event.clientX, event.clientY);
+      push(event.pointerId, at.x, at.y);
     };
 
     resize();
